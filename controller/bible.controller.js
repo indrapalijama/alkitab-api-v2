@@ -115,6 +115,7 @@ const read = async (req, res) => {
       });
 
       let result = items;
+      result = result.filter((obj) => obj.verse !== 0);
       res.status(200).json({
         verses: result,
         book,
