@@ -12,4 +12,6 @@ app.get("/", (req, res) => {
 app.use("/bible", isAuth, bible);
 app.use("/reflection", isAuth, reflection);
 
-app.listen(process.env.PORT, "0.0.0.0", () => {});
+app.listen(process.env.PORT, "0.0.0.0", () => {
+  console.log(`server started at http://localhost:${process.env.PORT}`);
+});
