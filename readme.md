@@ -84,7 +84,9 @@ Improve API
 - [x] Add New Source for Daily Reflection (Renungan Oswald Chambers)
 - [x] Get List of All Book
 - [ ] Get All Bible Version / Language
-- [ ] Get Kidung Jemaat, Pelengkap Kidung Jemaat, or other music source
+- [x] Get Kidung Jemaat Song List
+- [x] Get Kidung Jemaat Song Detail
+- [ ] Get PKJ and or other music source
 
 <!-- SOURCE -->
 
