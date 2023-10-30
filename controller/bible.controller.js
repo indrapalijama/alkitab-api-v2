@@ -27,8 +27,11 @@ const find = async (req, res) => {
         }
       });
       match.forEach((element) => {
-        if (element.match(/\d+/g)) {
-          verses.push(parseInt(element.match(/\d+/g)));
+        var regex = new RegExp(`https://alkitab.mobi/tb/${book}/(\\d+)`);
+        var matchResult = element.match(regex);
+
+        if (matchResult) {
+          verses.push(parseInt(matchResult[1]));
         }
       });
       res.status(200).json({
