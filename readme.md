@@ -83,10 +83,10 @@ Improve API
 - [x] Add Daily Reflection (Renungan Harian / Santapan Harian)
 - [x] Add New Source for Daily Reflection (Renungan Oswald Chambers)
 - [x] Get List of All Book
-- [ ] Get All Bible Version / Language
-- [x] Get Kidung Jemaat Song List
-- [x] Get Kidung Jemaat Song Detail
-- [ ] Get PKJ and or other music source
+- [x] Get Kidung Song List (KJ, PKJ, NKB)
+- [x] Get Song Detail (KJ, PKJ, NKB)
+- [ ] Get All Bible Version / Language List
+- [ ] Get All Bible Version / Language Detail
 
 <!-- SOURCE -->
 
