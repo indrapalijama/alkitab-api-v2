@@ -7,7 +7,31 @@ const isLink = (el) => {
 
 const getList = async (req, res) => {
   try {
-    const response = await axios.get("https://alkitab.mobi/kidung/kj");
+    const songversion = {
+      kj: {
+        url: "https://alkitab.mobi/kidung/kj",
+        name: "Kidung Jemaat",
+      },
+      pkj: {
+        url: "https://alkitab.mobi/kidung/pkj",
+        name: "Pelengkap Kidung Jemaat",
+      },
+      nkb: {
+        url: "https://alkitab.mobi/kidung/nkb",
+        name: "Nyanyikanlah Kidung Baru",
+      },
+    };
+
+    const versionKey = req.params.version;
+    const versionData = songversion[versionKey];
+
+    if (!versionData) {
+      return res.status(400).json({ error: "Invalid version" });
+    }
+
+    const { url, name } = versionData;
+
+    const response = await axios.get(url);
     const htmlData = response.data;
     const regex = /\d+/;
 
@@ -17,15 +41,42 @@ const getList = async (req, res) => {
 
     links.each((_, element) => {
       const text = $(element).text().trim();
-      if (text.includes("KJ ")) {
-        const title = text.split("-")[1].trim();
-        const link = element.attribs.href;
-        const [id] = link.match(regex);
-        const song = {
-          id,
-          title,
-        };
-        songs.push(song);
+      if (versionKey === "nkb") {
+        if (text.includes("NKB ")) {
+          const title = text.split("-")[1].trim();
+          const link = element.attribs.href;
+          const [id] = link.match(regex);
+          const song = {
+            source: name,
+            id,
+            title,
+          };
+          songs.push(song);
+        }
+      } else if (versionKey === "pkj") {
+        if (text.includes("PKJ ")) {
+          const title = text.split("-")[1].trim();
+          const link = element.attribs.href;
+          const [id] = link.match(regex);
+          const song = {
+            source: name,
+            id,
+            title,
+          };
+          songs.push(song);
+        }
+      } else {
+        if (text.includes("KJ ")) {
+          const title = text.split("-")[1].trim();
+          const link = element.attribs.href;
+          const [id] = link.match(regex);
+          const song = {
+            source: name,
+            id,
+            title,
+          };
+          songs.push(song);
+        }
       }
     });
     res.status(200).json(songs);
@@ -68,10 +119,19 @@ const convertToSongStruct = (a) => {
 };
 
 const getSongData = async (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id;
+  const versionKey = req.params.version;
+
+  const songversion = {
+    kj: ["Kidung Jemaat"],
+    pkj: ["Pelengkap Kidung Jemaat"],
+    nkb: ["Nyanyikanlah Kidung Baru"],
+  };
 
   try {
-    let data = await axios.get(`https://alkitab.mobi/kidung/kj/${id}`);
+    let data = await axios.get(
+      `https://alkitab.mobi/kidung/${versionKey}/${id}`
+    );
     let htmlData = data.data;
 
     let $ = cheerio.load(htmlData);
@@ -85,9 +145,10 @@ const getSongData = async (req, res) => {
     let idNumber = parseInt(id) || 0;
 
     let song = {
+      source: songversion[versionKey][0],
+      id: idNumber,
       title: "",
       lyrics: [],
-      id: idNumber,
     };
 
     song.title = title;
