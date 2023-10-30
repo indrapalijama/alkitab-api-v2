@@ -22,7 +22,7 @@ const getList = async (req, res) => {
       },
     };
 
-    const versionKey = req.params.version;
+    const versionKey = req.params.source.toLowerCase();
     const versionData = songversion[versionKey];
 
     if (!versionData) {
@@ -120,7 +120,7 @@ const convertToSongStruct = (a) => {
 
 const getSongData = async (req, res) => {
   const id = req.params.id;
-  const versionKey = req.params.version;
+  const versionKey = req.params.source.toLowerCase();
 
   const songversion = {
     kj: ["Kidung Jemaat"],
@@ -138,9 +138,21 @@ const getSongData = async (req, res) => {
     let a = $("p.paragraphtitle");
     let cc = a.nextUntil("hr");
 
-    let title = $("title")
-      .text()
-      .replace(/KJ\s([0-9]{1,3}\s-\s)/, "");
+    let title;
+
+    if (versionKey === "kj") {
+      title = $("title")
+        .text()
+        .replace(/KJ\s([0-9]{1,3}\s-\s)/, "");
+    } else if (versionKey === "pkj") {
+      title = $("title")
+        .text()
+        .replace(/PKJ\s([0-9]{1,3}\s-\s)/, "");
+    } else {
+      title = $("title")
+        .text()
+        .replace(/NKB\s([0-9]{1,3}\s-\s)/, "");
+    }
 
     let idNumber = parseInt(id) || 0;
 
