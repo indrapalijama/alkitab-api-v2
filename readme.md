@@ -28,7 +28,6 @@ Simple Alkitab API using expressJS, scrapped from mentioned source.
 
 - [Express JS](https://github.com/expressjs/express)
 - [CheerioJS](https://cheerio.js.org)
-- [Swagger](https://swagger.io)
 
 <!-- GETTING STARTED -->
 
@@ -57,7 +56,7 @@ This is an example of how to list things you need to use the software and how to
    ```
 3. Run the Application
    ```sh
-   node index.js
+   npm run start
    ```
 
 <!-- CONTRIBUTING -->
