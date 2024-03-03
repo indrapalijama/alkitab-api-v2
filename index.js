@@ -1,11 +1,20 @@
 const dotenv = require("dotenv").config();
 const express = require("express");
+const cors = require("cors"); // Add the cors middleware
 var app = express();
 const isAuth = require("./middleware/auth.middleware");
 
 var bible = require("./routes/bible.route");
 var reflection = require("./routes/reflection.route");
 var song = require("./routes/song.route");
+
+app.use(
+  cors({
+    origin: ["http://localhost:8100", "*"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 app.get("/", (req, res) => {
   res.send(new String("soli deo gloria"));
