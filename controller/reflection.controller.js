@@ -43,7 +43,8 @@ const get = async (req, res) => {
       res.status(200).json({
         Source: "Santapan Harian",
         Title: filteredTitle[0],
-        Date: filteredTanggal[2],
+        // Date: filteredTanggal[2],
+        Date: new Date(),
         Passage: filteredPassage[0].split("Bacaan:")[1].trim(),
         Content: content,
       });
@@ -115,7 +116,8 @@ const getCustom = async (req, res) => {
     res.status(200).json({
       Source: version,
       Title: filteredTitle[0],
-      Date: filteredTanggal[2],
+      // Date: filteredTanggal[2],
+      Date: new Date(),
       Passage:
         versionKey === "sh"
           ? filteredPassage[0].split("Bacaan:")[1].trim()
