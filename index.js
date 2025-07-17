@@ -24,5 +24,5 @@ app.use("/reflection", isAuth, reflection);
 app.use("/song", isAuth, song);
 
 app.listen(process.env.PORT, "0.0.0.0", () => {
-  console.log(`server started at http://localhost:${process.env.PORT}`);
+  console.log(`cooking now @ http://localhost:${process.env.PORT}`);
 });
