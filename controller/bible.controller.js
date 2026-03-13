@@ -69,9 +69,9 @@ const read = async (req, res) => {
       chapter = parseInt($("title").text().match(/\d+/g));
       let items = [];
 
-      $("p").filter((i, el) => {
+      let lastVerse = 0;
+      $("p").each((i, el) => {
         let data = $(el);
-        let lastVerse = 0;
         let content = data.find("[data-begin]").first().text();
         let title = data.find(".paragraphtitle").first().text();
         let verse = data.find(".reftext").children().first().text();
@@ -93,7 +93,6 @@ const read = async (req, res) => {
         if (title) {
           type = "title";
           content = title;
-          verse = lastVerse + 1;
         } else if (content) {
           type = "content";
           lastVerse = verse;
@@ -107,18 +106,24 @@ const read = async (req, res) => {
           type = null;
         }
 
-        if (type) {
+        if (type === "title") {
           item = {
-            verse,
+            type,
             content,
           };
           items.push(item);
+        } else if (type === "content") {
+          item = {
+            verse,
+            content,
+            type,
+          };
+          items.push(item);
         }
-        return item;
       });
 
       let result = items;
-      result = result.filter((obj) => obj.verse !== 0);
+      result = result.filter((obj) => obj.type === "title" || (obj.type === "content" && obj.verse !== 0));
       res.status(200).json({
         verses: result,
         book,
