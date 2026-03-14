@@ -90,21 +90,38 @@ const getCustom = async (req, res) => {
         const body = [];
         const passage = [];
         const date = [];
+        const intro = [];
 
         // Begin cheerio scraping
         $("div").each((i, el) => {
             const data = $(el);
+            // Extract title and date
             const strong = data.find("strong").first().text();
             title.push(strong);
             date.push(data.find("span").first().text());
-            const pText = data.find("p").text();
-            const strongIndex = pText.indexOf(strong);
-            if (strongIndex !== -1 && strong !== "") {
-                passage.push(pText.substring(0, strongIndex));
-                body.push(pText.substring(strongIndex + strong.length));
+
+            if (versionKey === "roc") {
+                const renunganDiv = data.children("div").text();
+                if (renunganDiv) {
+                    const introP = data.children("p").filter((j, p) => $(p).text().includes("Intro:")).text().replace("Intro:", "").trim();
+                    intro.push(introP);
+
+                    const pText = data.find("p").text();
+                    const strongIndex = pText.indexOf(strong);
+                    passage.push(strongIndex !== -1 && strong !== "" ? pText.substring(0, strongIndex) : pText);
+
+                    body.push(renunganDiv);
+                }
             } else {
-                passage.push(pText);
-                body.push("");
+                const pText = data.find("p").text();
+                const strongIndex = pText.indexOf(strong);
+                if (strongIndex !== -1 && strong !== "") {
+                    passage.push(pText.substring(0, strongIndex));
+                    body.push(pText.substring(strongIndex + strong.length));
+                } else {
+                    passage.push(pText);
+                    body.push("");
+                }
             }
         });
 
@@ -116,8 +133,7 @@ const getCustom = async (req, res) => {
 
         // modify content for specific version
         if (versionKey === "roc") {
-            content = content.split("Intro:")[1];
-            content = content.trim();
+            content = content.replace("Renungan:", "").trim();
         } else if (versionKey === "rh") {
             content = content.split(" --")[0];
         }
@@ -125,11 +141,9 @@ const getCustom = async (req, res) => {
         const tempFiltered = date.filter((el) => el !== undefined);
         const filteredTanggal = tempFiltered.filter((el) => el !== "");
 
-        // Return the data
-        res.status(200).json({
+        const responseData = {
             Source: version,
             Title: filteredTitle[0],
-            // Date: filteredTanggal[2],
             Date: new Date(),
             Passage:
                 versionKey === "sh"
@@ -138,7 +152,15 @@ const getCustom = async (req, res) => {
                         filteredPassage[0].split("Bacaan:")[1].trim()
                     ),
             Content: content,
-        });
+        };
+
+        if (versionKey === "roc") {
+            const filteredIntro = intro.filter((el) => el !== undefined && el !== "");
+            responseData.Intro = filteredIntro[0];
+        }
+
+        // Return the data
+        res.status(200).json(responseData);
     } catch (error) {
         res.status(500).json({
             error: "An error occurred while fetching and processing the data.",
