@@ -55,10 +55,12 @@ const read = async (req, res) => {
     var version = req.params.version == undefined ? "tb" : req.params.version;
 
     let requestedVerses = [];
+    let requestedVersesStr = null;
     if (typeof chapter === "string" && chapter.includes(":")) {
         const parts = chapter.split(":");
         chapter = parts[0];
         const versePart = parts[1];
+        requestedVersesStr = versePart;
 
         if (versePart.includes("-")) {
             const [start, end] = versePart.split("-").map(Number);
@@ -144,18 +146,16 @@ const read = async (req, res) => {
 
             if (requestedVerses.length > 0) {
                 let filteredResult = [];
+                let lastTitle = null;
                 for (let i = 0; i < result.length; i++) {
                     let obj = result[i];
                     if (obj.type === "title") {
-                        if (
-                            i + 1 < result.length &&
-                            result[i + 1].type === "content" &&
-                            requestedVerses.includes(result[i + 1].verse)
-                        ) {
-                            filteredResult.push(obj);
-                        }
+                        lastTitle = obj;
                     } else if (obj.type === "content" && obj.verse !== 0) {
                         if (requestedVerses.includes(obj.verse)) {
+                            if (lastTitle && !filteredResult.includes(lastTitle)) {
+                                filteredResult.push(lastTitle);
+                            }
                             filteredResult.push(obj);
                         }
                     }
@@ -167,11 +167,16 @@ const read = async (req, res) => {
                 );
             }
 
-            res.status(200).json({
+            let responsePayload = {
                 verses: result,
-                book,
-                chapter,
-            });
+                book: book,
+                chapter: chapter,
+            };
+            if (requestedVersesStr) {
+                responsePayload.verse = requestedVersesStr;
+            }
+
+            res.status(200).json(responsePayload);
         },
         (error) => {
             res.status(500).json({
