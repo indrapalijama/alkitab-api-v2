@@ -8,6 +8,10 @@
   ],
   "routes": [
     {
+      "src": "/database/(.*)",
+      "dest": "https://pub-9e4f37fb34284aad81e4b9c7a8285ee9.r2.dev/database/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/"
     }
