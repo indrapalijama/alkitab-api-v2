@@ -1,6 +1,7 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 // R2 Client configuration
 const r2Client = new S3Client({
@@ -34,17 +35,50 @@ const getCustom = async (req, res) => {
             return res.status(400).json({ error: "Invalid version" });
         }
 
-        let fetchUrl = versionData.url;
         let isHistorical = false;
-
         if (dateParam) {
-            // Validate date format YYYY-MM-DD
             if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
                 return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
             }
+            isHistorical = true;
+        } else {
+            // For latest, we should determine today's date in GMT+7 (or typical Indonesia time) to use as cache key for R2
+            // Actually, we can just use "latest" as the date part for the cache key, but it changes daily.
+        }
+
+        const s3Key = isHistorical 
+            ? `reflections/${dateParam}/${versionKey}.json`
+            : `reflections/latest/${versionKey}.json`;
+
+        // 1. Try to fetch from R2 first
+        if (process.env.R2_ENDPOINT && process.env.R2_BUCKET_NAME) {
+            try {
+                const getCmd = new GetObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: s3Key,
+                });
+                // To read the JSON from S3, we can use the stream
+                const r2Response = await r2Client.send(getCmd);
+                const streamToString = (stream) =>
+                    new Promise((resolve, reject) => {
+                        const chunks = [];
+                        stream.on("data", (chunk) => chunks.push(chunk));
+                        stream.on("error", reject);
+                        stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+                    });
+                const r2Data = await streamToString(r2Response.Body);
+                return res.status(200).json(JSON.parse(r2Data));
+            } catch (err) {
+                // Not found or error, proceed to scrape
+                console.log("R2 cache miss or error:", err.name);
+            }
+        }
+
+        // 2. Scrape from alkitab.mobi
+        let fetchUrl = versionData.url;
+        if (isHistorical) {
             const [year, month, day] = dateParam.split('-');
             fetchUrl = `${fetchUrl}/${year}/${month}/${day}/`;
-            isHistorical = true;
         }
 
         const { data } = await axios.get(fetchUrl);
@@ -56,10 +90,8 @@ const getCustom = async (req, res) => {
         const date = [];
         const intro = [];
 
-        // Begin cheerio scraping
         $("div").each((i, el) => {
             const elData = $(el);
-            // Extract title and date
             const strong = elData.find("strong").first().text();
             title.push(strong);
             date.push(elData.find("span").first().text());
@@ -89,7 +121,6 @@ const getCustom = async (req, res) => {
             }
         });
 
-        // Filter out undefined or empty string values
         const filteredTitle = title.filter((el) => el !== "");
         const filteredBody = body.filter((el) => el !== undefined && el !== "");
         let filteredPassage = passage.filter((el) => el !== undefined && el !== "");
@@ -100,7 +131,6 @@ const getCustom = async (req, res) => {
 
         let content = filteredBody[0].split("* * *")[0];
 
-        // modify content for specific version
         if (versionKey === "roc") {
             content = content.replace("Renungan:", "").trim();
         } else if (versionKey === "rh") {
@@ -110,7 +140,7 @@ const getCustom = async (req, res) => {
         const responseData = {
             Source: versionData.name,
             Title: filteredTitle[0],
-            Date: dateParam ? dateParam : new Date().toISOString(), // Use requested date or current time
+            Date: dateParam ? dateParam : new Date().toISOString(),
             Passage:
                 versionKey === "sh"
                     ? (filteredPassage[0] && filteredPassage[0].includes("Bacaan:") ? filteredPassage[0].split("Bacaan:")[1].trim() : filteredPassage[0])
@@ -123,14 +153,9 @@ const getCustom = async (req, res) => {
             responseData.Intro = filteredIntro[0];
         }
 
-        // --- CACHE TO R2 LOGIC ---
+        // 3. Cache to R2
         if (process.env.R2_ENDPOINT && process.env.R2_BUCKET_NAME) {
             try {
-                // R2 Key: reflections/2023-10-25/sh.json
-                const s3Key = isHistorical 
-                    ? `reflections/${dateParam}/${versionKey}.json`
-                    : `reflections/latest/${versionKey}.json`;
-                
                 await r2Client.send(new PutObjectCommand({
                     Bucket: process.env.R2_BUCKET_NAME,
                     Key: s3Key,
@@ -143,7 +168,6 @@ const getCustom = async (req, res) => {
             }
         }
 
-        // Return the data
         res.status(200).json(responseData);
     } catch (error) {
         console.error(error);
