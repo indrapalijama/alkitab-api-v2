@@ -7,6 +7,7 @@ const isAuth = require("./middleware/auth.middleware");
 var bible = require("./routes/bible.route");
 var reflection = require("./routes/reflection.route");
 var song = require("./routes/song.route");
+var appRoute = require("./routes/app.route");
 
 app.use(
   cors({
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 app.use("/bible", isAuth, bible);
 app.use("/reflection", isAuth, reflection);
 app.use("/song", isAuth, song);
+app.use("/app", appRoute); // Not auth required
 
 app.listen(process.env.PORT, "0.0.0.0", () => {
   console.log(`cooking now @ http://localhost:${process.env.PORT}`);
