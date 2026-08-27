@@ -1,18 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const gplay = require('google-play-scraper');
 
 router.get('/version', async (req, res) => {
   try {
     const appId = req.query.appId || 'fulk.evilcorp.dailyreflection';
+    // google-play-scraper is ESM-only, must use dynamic import() in CommonJS
+    const gplay = await import('google-play-scraper');
     const app = await gplay.default.app({ appId });
     
-    // google-play-scraper returns version as string, e.g., "1.2.0"
     res.json({
       latestVersionName: app.version,
-      // It's hard to get versionCode from the public store, so we provide versionName
       url: app.url,
-      forceUpdate: false // Can be configured later
+      forceUpdate: false
     });
   } catch (error) {
     console.error("Error fetching app version:", error);
