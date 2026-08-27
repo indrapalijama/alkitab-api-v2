@@ -4,14 +4,10 @@ const router = express.Router();
 router.get('/version', async (req, res) => {
   try {
     const appId = req.query.appId || 'fulk.evilcorp.dailyreflection';
-    // google-play-scraper is ESM-only, must use dynamic import() in CommonJS
-    const gplay = await import('google-play-scraper');
-    const app = await gplay.default.app({ appId });
     
-    // Fetch config from R2 for minVersionCode
+    // 1. Fetch config from R2 for minVersionCode independently
     let minVersionCode = 0;
     try {
-      // Node 18+ has native fetch()
       const configRes = await fetch("https://pub-9e4f37fb34284aad81e4b9c7a8285ee9.r2.dev/config/app.json");
       if (configRes.ok) {
         const config = await configRes.json();
@@ -20,24 +16,30 @@ router.get('/version', async (req, res) => {
     } catch (e) {
       console.error("Failed to fetch config from R2:", e);
     }
+
+    // 2. Try fetching latest Play Store version
+    let latestVersionName = "1.0.0";
+    let url = `https://play.google.com/store/apps/details?id=${appId}`;
+    try {
+      const gplay = await import('google-play-scraper');
+      const app = await gplay.default.app({ appId });
+      latestVersionName = app.version || latestVersionName;
+      url = app.url || url;
+    } catch (playError) {
+      console.error("Error fetching from Play Store (could be rate limit):", playError);
+      // We continue since we still have the minVersionCode
+    }
     
     res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=7200");
     res.json({
-      latestVersionName: app.version,
-      url: app.url,
+      latestVersionName,
+      url,
       forceUpdate: false,
-      minVersionCode: minVersionCode
+      minVersionCode
     });
   } catch (error) {
-    console.error("Error fetching app version:", error);
-    // Fallback if not found on play store yet
-    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=7200");
-    res.json({
-      latestVersionName: "1.0.0",
-      url: `https://play.google.com/store/apps/details?id=fulk.evilcorp.dailyreflection`,
-      forceUpdate: false,
-      minVersionCode: 0
-    });
+    console.error("Fatal error in app version route:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
