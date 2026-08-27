@@ -45,67 +45,55 @@ const getList = async (req, res) => {
                 if (text.includes("NKB ")) {
                     const title = text.split("-")[1].trim();
                     const link = element.attribs.href;
-                    const [id] = link.match(regex);
-                    const song = {
-                        source: name,
-                        id,
-                        title,
-                    };
-                    songs.push(song);
+                    const match = link.match(regex);
+                    if (match) {
+                        songs.push({ source: name, id: match[0], title });
+                    }
                 }
             } else if (versionKey === "pkj") {
                 if (text.includes("PKJ ")) {
                     const title = text.split("-")[1].trim();
                     const link = element.attribs.href;
-                    const [id] = link.match(regex);
-                    const song = {
-                        source: name,
-                        id,
-                        title,
-                    };
-                    songs.push(song);
+                    const match = link.match(regex);
+                    if (match) {
+                        songs.push({ source: name, id: match[0], title });
+                    }
                 }
             } else {
                 if (text.includes("KJ ")) {
                     const title = text.split("-")[1].trim();
                     const link = element.attribs.href;
-                    const [id] = link.match(regex);
-                    const song = {
-                        source: name,
-                        id,
-                        title,
-                    };
-                    songs.push(song);
+                    const match = link.match(regex);
+                    if (match) {
+                        songs.push({ source: name, id: match[0], title });
+                    }
                 }
             }
         });
+        
+        // Cache song list since it never changes
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800');
         res.status(200).json(songs);
     } catch (error) {
+        console.error("Song getList error:", error.message);
         res.status(500).json({
-            error: `An error occurred while fetching the data (${error})`,
+            error: "An error occurred while fetching the song list",
         });
     }
 };
 
 const sanitizeCheerioElement = ($, e) => {
     let t = $(e).text();
-
     let b = t.split("\n");
 
-    b = b
+    return b
         .filter((v) => v !== "")
-        .map((v) => {
-            return v.trim();
-        })
-        .filter((v) => v !== "")
-        .filter((v) => v !== "Play");
-
-    return b;
+        .map((v) => v.trim())
+        .filter((v) => v !== "" && v !== "Play");
 };
 
 const convertToSongStruct = (a) => {
     const isReff = a[0] === "Reff:";
-
     return {
         element: isReff ? "reff" : "verse",
         content: a.slice(1).join("\n"),
@@ -121,12 +109,15 @@ const getSongData = async (req, res) => {
         pkj: ["Pelengkap Kidung Jemaat"],
         nkb: ["Nyanyikanlah Kidung Baru"],
     };
+    
+    if (!songversion[versionKey]) {
+        return res.status(400).json({ error: "Invalid version" });
+    }
 
     try {
-        let data = await axios.get(
+        let { data: htmlData } = await axios.get(
             `https://alkitab.mobi/kidung/${versionKey}/${id}`
         );
-        let htmlData = data.data;
 
         let $ = cheerio.load(htmlData);
         let a = $("p.paragraphtitle");
@@ -135,17 +126,11 @@ const getSongData = async (req, res) => {
         let title;
 
         if (versionKey === "kj") {
-            title = $("title")
-                .text()
-                .replace(/KJ\s([0-9]{1,3}\s-\s)/, "");
+            title = $("title").text().replace(/KJ\s([0-9]{1,3}\s-\s)/, "");
         } else if (versionKey === "pkj") {
-            title = $("title")
-                .text()
-                .replace(/PKJ\s([0-9]{1,3}\s-\s)/, "");
+            title = $("title").text().replace(/PKJ\s([0-9]{1,3}\s-\s)/, "");
         } else {
-            title = $("title")
-                .text()
-                .replace(/NKB\s([0-9]{1,3}\s-\s)/, "");
+            title = $("title").text().replace(/NKB\s([0-9]{1,3}\s-\s)/, "");
         }
 
         let idNumber = parseInt(id) || 0;
@@ -153,11 +138,9 @@ const getSongData = async (req, res) => {
         let song = {
             source: songversion[versionKey][0],
             id: idNumber,
-            title: "",
+            title: title.trim(),
             lyrics: [],
         };
-
-        song.title = title;
 
         cc.each((_, v) => {
             $(v).each((_, e) => {
@@ -170,10 +153,13 @@ const getSongData = async (req, res) => {
             });
         });
 
+        // Cache individual song since lyrics never change
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800');
         res.status(200).json(song);
     } catch (error) {
+        console.error("Song getSongData error:", error.message);
         res.status(500).json({
-            error: `An error occurred while fetching the data (${error})`,
+            error: "An error occurred while fetching song lyrics",
         });
     }
 };

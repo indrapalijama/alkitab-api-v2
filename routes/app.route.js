@@ -21,6 +21,7 @@ router.get('/version', async (req, res) => {
       console.error("Failed to fetch config from R2:", e);
     }
     
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=7200");
     res.json({
       latestVersionName: app.version,
       url: app.url,
@@ -30,6 +31,7 @@ router.get('/version', async (req, res) => {
   } catch (error) {
     console.error("Error fetching app version:", error);
     // Fallback if not found on play store yet
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=7200");
     res.json({
       latestVersionName: "1.0.0",
       url: `https://play.google.com/store/apps/details?id=fulk.evilcorp.dailyreflection`,

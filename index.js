@@ -11,9 +11,9 @@ var appRoute = require("./routes/app.route");
 
 app.use(
   cors({
-    origin: ["http://localhost:8100", "*"],
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
+    
   })
 );
 
