@@ -35,19 +35,27 @@ const getCustom = async (req, res) => {
             return res.status(400).json({ error: "Invalid version" });
         }
 
+        // Determine today's date in GMT+7 (Asia/Jakarta) format YYYY-MM-DD
+        const todayJakarta = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+
         let isHistorical = false;
+        let effectiveDate = todayJakarta;
+
         if (dateParam) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
                 return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
             }
-            isHistorical = true;
-        } else {
-            // For latest, we should determine today's date in GMT+7 (or typical Indonesia time) to use as cache key for R2
-            // Actually, we can just use "latest" as the date part for the cache key, but it changes daily.
+            if (dateParam === todayJakarta) {
+                isHistorical = false;
+                effectiveDate = todayJakarta;
+            } else {
+                isHistorical = true;
+                effectiveDate = dateParam;
+            }
         }
 
         const s3Key = isHistorical 
-            ? `reflections/${dateParam}/${versionKey}.json`
+            ? `reflections/${effectiveDate}/${versionKey}.json`
             : `reflections/latest/${versionKey}.json`;
 
         // 1. Try to fetch from R2 first
@@ -57,7 +65,6 @@ const getCustom = async (req, res) => {
                     Bucket: process.env.R2_BUCKET_NAME,
                     Key: s3Key,
                 });
-                // To read the JSON from S3, we can use the stream
                 const r2Response = await r2Client.send(getCmd);
                 const streamToString = (stream) =>
                     new Promise((resolve, reject) => {
@@ -67,7 +74,16 @@ const getCustom = async (req, res) => {
                         stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
                     });
                 const r2Data = await streamToString(r2Response.Body);
-                return res.status(200).json(JSON.parse(r2Data));
+                const parsed = JSON.parse(r2Data);
+
+                // CRITICAL VALIDATION:
+                // Check if cached reflection date actually matches the expected date!
+                const cachedDate = parsed.Date ? parsed.Date.substring(0, 10) : "";
+                if (cachedDate === effectiveDate && parsed.Title && parsed.Content) {
+                    return res.status(200).json(parsed);
+                } else {
+                    console.log(`R2 cache stale/mismatch for ${s3Key}: cached date=${cachedDate}, expected=${effectiveDate}. Re-scraping.`);
+                }
             } catch (err) {
                 // Not found or error, proceed to scrape
                 console.log("R2 cache miss or error:", err.name);
@@ -77,7 +93,7 @@ const getCustom = async (req, res) => {
         // 2. Scrape from alkitab.mobi
         let fetchUrl = versionData.url;
         if (isHistorical) {
-            const [year, month, day] = dateParam.split('-');
+            const [year, month, day] = effectiveDate.split('-');
             fetchUrl = `${fetchUrl}/${year}/${month}/${day}/`;
         }
 
@@ -140,7 +156,7 @@ const getCustom = async (req, res) => {
         const responseData = {
             Source: versionData.name,
             Title: filteredTitle[0],
-            Date: dateParam ? dateParam : new Date().toISOString(),
+            Date: effectiveDate,
             Passage:
                 versionKey === "sh"
                     ? (filteredPassage[0] && filteredPassage[0].includes("Bacaan:") ? filteredPassage[0].split("Bacaan:")[1].trim() : filteredPassage[0])
@@ -153,16 +169,28 @@ const getCustom = async (req, res) => {
             responseData.Intro = filteredIntro[0];
         }
 
-        // 3. Cache to R2
+        // 3. Cache to R2 (update archive and, if today, update latest)
         if (process.env.R2_ENDPOINT && process.env.R2_BUCKET_NAME) {
             try {
+                // Always write to archive key for this date
                 await r2Client.send(new PutObjectCommand({
                     Bucket: process.env.R2_BUCKET_NAME,
-                    Key: s3Key,
+                    Key: `reflections/${effectiveDate}/${versionKey}.json`,
                     Body: JSON.stringify(responseData),
                     ContentType: "application/json",
                     CacheControl: isHistorical ? "public, max-age=31536000, immutable" : "public, max-age=3600"
                 }));
+
+                // If this is today's reflection, also update reflections/latest/
+                if (!isHistorical) {
+                    await r2Client.send(new PutObjectCommand({
+                        Bucket: process.env.R2_BUCKET_NAME,
+                        Key: `reflections/latest/${versionKey}.json`,
+                        Body: JSON.stringify(responseData),
+                        ContentType: "application/json",
+                        CacheControl: "public, max-age=3600"
+                    }));
+                }
             } catch (s3Error) {
                 console.error("Failed to upload to R2:", s3Error);
             }
