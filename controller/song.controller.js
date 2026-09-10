@@ -82,22 +82,51 @@ const getList = async (req, res) => {
     }
 };
 
+const cleanContent = (text) => {
+    if (!text) return "";
+    let s = text;
+    // Replace tabs with space
+    s = s.replace(/\t/g, " ");
+    // Fix known typo like t,rang -> t'rang
+    s = s.replace(/\b([stbkg])\,([a-z]+)/gi, "$1'$2");
+    // Fix punctuation immediately followed by letter: add space
+    s = s.replace(/([,;:!?])([a-zA-Z])/g, "$1 $2");
+    // Trim lines and collapse excessive whitespace within lines
+    const lines = s.split("\n").map(l => l.replace(/[ \t]+/g, " ").trim()).filter(l => l.length > 0);
+    return lines.join("\n");
+};
+
 const sanitizeCheerioElement = ($, e) => {
+    $(e).find("br").replaceWith("\n");
     let t = $(e).text();
     let b = t.split("\n");
 
     return b
-        .filter((v) => v !== "")
         .map((v) => v.trim())
         .filter((v) => v !== "" && v !== "Play");
 };
 
 const convertToSongStruct = (a) => {
-    const isReff = a[0] === "Reff:";
+    const firstLine = a[0];
+    const isReff = /^Reff:?$/i.test(firstLine);
+    let contentLines;
+    if (isReff) {
+        contentLines = a.slice(1);
+    } else if (/^\d+\.?$/.test(firstLine)) {
+        contentLines = a.slice(1);
+    } else {
+        contentLines = a;
+    }
+
+    const content = cleanContent(contentLines.join("\n"));
     return {
         element: isReff ? "reff" : "verse",
-        content: a.slice(1).join("\n"),
+        content: content,
     };
+};
+
+const linesAreVariantHeader = (b) => {
+    return b.length === 1 && /^(KJ|PKJ|NKB)\s*\d+[a-z]?$/i.test(b[0]);
 };
 
 const getSongData = async (req, res) => {
@@ -107,7 +136,7 @@ const getSongData = async (req, res) => {
     const songversion = {
         kj: ["Kidung Jemaat"],
         pkj: ["Pelengkap Kidung Jemaat"],
-        nkb: ["Nyanyikanlah Kidung Baru"],
+        nkb: ["Nyanyian Kidung Baru"],
     };
     
     if (!songversion[versionKey]) {
@@ -147,8 +176,14 @@ const getSongData = async (req, res) => {
                 let b = sanitizeCheerioElement($, e);
 
                 if (b.length > 0) {
+                    // Skip variant header like "KJ 24a", "NKB 30b"
+                    if (linesAreVariantHeader(b)) {
+                        return;
+                    }
                     let ss = convertToSongStruct(b);
-                    song.lyrics.push(ss);
+                    if (ss.content.length > 0) {
+                        song.lyrics.push(ss);
+                    }
                 }
             });
         });
