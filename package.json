@@ -1,6 +1,6 @@
 {
   "name": "alkitab-api-v2",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Alkitab API",
   "main": "index.js",
   "engines": {
