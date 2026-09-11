@@ -9,6 +9,7 @@ var reflection = require("./routes/reflection.route");
 var song = require("./routes/song.route");
 var appRoute = require("./routes/app.route");
 var docsRoute = require("./routes/docs.route");
+var legalRoute = require("./routes/legal.route");
 
 app.use(
   cors({
@@ -21,6 +22,7 @@ app.use(
 app.get("/", (req, res) => {
   res.send(new String("soli deo gloria - API Documentation available at /docs"));
 });
+app.use("/", legalRoute); // Privacy Policy & Data Deletion pages
 app.use("/docs", docsRoute); // Interactive Swagger UI & OpenAPI JSON
 app.use("/api-docs", (req, res) => res.redirect("/docs"));
 app.use("/bible", isAuth, bible);
