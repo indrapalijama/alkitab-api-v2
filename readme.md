@@ -37,6 +37,13 @@ Simple Alkitab API using expressJS, scrapped from mentioned source.
 
 ## API Endpoints
 
+### 0. Interactive API Documentation (Swagger UI)
+
+- **Interactive Swagger UI:** [`/docs`](https://fulk-bible.vercel.app/docs) or [`/api-docs`](https://fulk-bible.vercel.app/api-docs)
+- **Raw OpenAPI 3.0 Spec (JSON):** [`/docs/openapi.json`](https://fulk-bible.vercel.app/docs/openapi.json)
+
+> **Authentication in Swagger UI:** Protected endpoints (`/bible`, `/reflection`, `/song`) require an `accesskey` header. You can click the **Authorize** button in Swagger UI to test protected endpoints directly.
+
 ### 1. App Version & Dynamic What's New
 
 ```http
@@ -134,7 +141,7 @@ Contributions are what make the open source community such an amazing place to l
 - [x] Get Song Detail (KJ, PKJ, NKB)
 - [x] App version detection & dynamic What's New from Google Play (`/app/version`)
 - [x] 15-minute Edge CDN caching for version checks
-- [ ] Add Swagger API documentation
+- [x] Add Swagger API documentation (`/docs`)
 - [ ] Get All Bible Version / Language List
 - [ ] Get All Bible Version / Language Detail
 

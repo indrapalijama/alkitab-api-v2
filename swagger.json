@@ -1,0 +1,697 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Alkitab API V2",
+    "version": "2.0.0",
+    "description": "RESTful API providing access to daily Christian devotionals, Bible chapters & verses, hymn lyrics (Kidung Jemaat, PKJ, NKB), and mobile app version updates.",
+    "contact": {
+      "name": "Indra Palijama",
+      "url": "https://github.com/indrapalijama/alkitab-api-v2"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://fulk-bible.vercel.app",
+      "description": "Production Server (Vercel Edge)"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "App",
+      "description": "Application updates, release notes, and version checks"
+    },
+    {
+      "name": "Bible",
+      "description": "Bible reading, chapters, verses, and book metadata"
+    },
+    {
+      "name": "Reflection",
+      "description": "Daily devotionals (Santapan Harian, Renungan Harian, Oswald Chambers)"
+    },
+    {
+      "name": "Song",
+      "description": "Indonesian Christian hymn books (Kidung Jemaat, PKJ, NKB)"
+    }
+  ],
+  "paths": {
+    "/app/version": {
+      "get": {
+        "tags": [
+          "App"
+        ],
+        "summary": "Check latest app version and dynamic release notes",
+        "description": "Scrapes the Google Play Store for the live app version and localized release notes (recentChanges), and retrieves minVersionCode from R2 config. Cached at Edge CDN for 15 minutes.",
+        "parameters": [
+          {
+            "name": "appId",
+            "in": "query",
+            "description": "Application package ID on Google Play",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "fulk.evilcorp.dailyreflection"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Language code for release notes",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "en"
+              ],
+              "default": "id"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "Country code for Play Store lookup",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "id",
+                "us"
+              ],
+              "default": "id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App version metadata retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppVersionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bible/find/{book}": {
+      "get": {
+        "tags": [
+          "Bible"
+        ],
+        "summary": "Get chapter metadata and total verses for a book",
+        "description": "Retrieves the list of chapters and verse metadata for a specific Bible book. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "book",
+            "in": "path",
+            "required": true,
+            "description": "Book identifier abbreviation (e.g. kej, mat, yoh, rom)",
+            "schema": {
+              "type": "string",
+              "example": "kej"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book metadata retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibleBookMetaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid accesskey header"
+          },
+          "500": {
+            "description": "Failed to fetch book metadata"
+          }
+        }
+      }
+    },
+    "/bible/read/{book}/{chapter}": {
+      "get": {
+        "tags": [
+          "Bible"
+        ],
+        "summary": "Read Bible chapter or specific verses (default TB)",
+        "description": "Reads the content of a Bible chapter or specific verse range in Terjemahan Baru (TB). Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "book",
+            "in": "path",
+            "required": true,
+            "description": "Book abbreviation (e.g. kej, luk, yoh)",
+            "schema": {
+              "type": "string",
+              "example": "yoh"
+            }
+          },
+          {
+            "name": "chapter",
+            "in": "path",
+            "required": true,
+            "description": "Chapter number or verse specification (e.g. 1, 3:16, 1:1-5, 1:1,3,5)",
+            "schema": {
+              "type": "string",
+              "example": "3:16"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bible passage content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibleChapterResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch Bible content"
+          }
+        }
+      }
+    },
+    "/bible/read/{book}/{chapter}/{version}": {
+      "get": {
+        "tags": [
+          "Bible"
+        ],
+        "summary": "Read Bible chapter in a specific translation/version",
+        "description": "Reads Bible content in a specific translation version (e.g. tb, bis, tsi, fayh, kjv). Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "book",
+            "in": "path",
+            "required": true,
+            "description": "Book abbreviation (e.g. kej, yoh, rom)",
+            "schema": {
+              "type": "string",
+              "example": "yoh"
+            }
+          },
+          {
+            "name": "chapter",
+            "in": "path",
+            "required": true,
+            "description": "Chapter or verse specification (e.g. 1, 3:16, 1:1-5)",
+            "schema": {
+              "type": "string",
+              "example": "3:16"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "description": "Bible translation version code (e.g. tb, bis, tsi, fayh, amd, kjv)",
+            "schema": {
+              "type": "string",
+              "example": "tb"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bible passage in the requested translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibleChapterResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch Bible content"
+          }
+        }
+      }
+    },
+    "/reflection": {
+      "get": {
+        "tags": [
+          "Reflection"
+        ],
+        "summary": "Get today reflection (default: Santapan Harian)",
+        "description": "Alias for /reflection/sh for today devotional. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Today reflection content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyReflectionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch reflection"
+          }
+        }
+      }
+    },
+    "/reflection/{version}": {
+      "get": {
+        "tags": [
+          "Reflection"
+        ],
+        "summary": "Get daily reflection by version and date",
+        "description": "Fetches devotional content from Cloudflare R2 cache with fallback to live scraping. Supports today or historical dates. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "description": "Reflection source identifier",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sh",
+                "rh",
+                "roc"
+              ],
+              "example": "sh"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "Historical reflection date formatted as YYYY-MM-DD (e.g. 2026-09-10). Defaults to current date in Asia/Jakarta timezone.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-09-11"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily reflection content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyReflectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid version or date format"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch reflection"
+          }
+        }
+      }
+    },
+    "/song/{source}/list": {
+      "get": {
+        "tags": [
+          "Song"
+        ],
+        "summary": "Get hymn list for a song book",
+        "description": "Returns all songs available in the selected Indonesian Christian hymn book. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "Song book identifier (kj = Kidung Jemaat, pkj = Pelengkap Kidung Jemaat, nkb = Nyanyikanlah Kidung Baru)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "kj",
+                "pkj",
+                "nkb"
+              ],
+              "example": "kj"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of hymns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SongListItem"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid song book source"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch song list"
+          }
+        }
+      }
+    },
+    "/song/detail/{source}/{id}": {
+      "get": {
+        "tags": [
+          "Song"
+        ],
+        "summary": "Get hymn lyrics and details",
+        "description": "Retrieves complete stanza lyrics and refrain for a specific song number. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "description": "Song book identifier",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "kj",
+                "pkj",
+                "nkb"
+              ],
+              "example": "kj"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Hymn number",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hymn lyrics and metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SongDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid song source or ID"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Failed to fetch song details"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "accesskey",
+        "description": "Secret API access key required for protected endpoints"
+      }
+    },
+    "schemas": {
+      "AppVersionResponse": {
+        "type": "object",
+        "properties": {
+          "latestVersionName": {
+            "type": "string",
+            "example": "1.4.3"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://play.google.com/store/apps/details?id=fulk.evilcorp.dailyreflection&hl=id&gl=id"
+          },
+          "forceUpdate": {
+            "type": "boolean",
+            "example": false
+          },
+          "minVersionCode": {
+            "type": "integer",
+            "example": 0
+          },
+          "recentChanges": {
+            "type": "string",
+            "nullable": true,
+            "example": "- Pemulihan favorit dan sinkronisasi cloud lebih andal.\n- Tampilan \"Yang Baru\" dinamis."
+          }
+        }
+      },
+      "BibleBookMetaResponse": {
+        "type": "object",
+        "properties": {
+          "book": {
+            "type": "string",
+            "example": "Kej"
+          },
+          "total_verse": {
+            "type": "integer",
+            "example": 50
+          },
+          "verses": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        }
+      },
+      "BibleVerse": {
+        "type": "object",
+        "properties": {
+          "verse": {
+            "type": "integer",
+            "example": 1
+          },
+          "content": {
+            "type": "string",
+            "example": "Pada mulanya Allah menciptakan langit dan bumi."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "title",
+              "content"
+            ],
+            "example": "content"
+          }
+        }
+      },
+      "BibleChapterResponse": {
+        "type": "object",
+        "properties": {
+          "verses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BibleVerse"
+            }
+          },
+          "book": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Kejadian"
+            ]
+          },
+          "chapter": {
+            "type": "integer",
+            "example": 1
+          },
+          "verse": {
+            "type": "string",
+            "nullable": true,
+            "example": "1:1-5"
+          }
+        }
+      },
+      "DailyReflectionResponse": {
+        "type": "object",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "example": "Berakar dalam Kasih"
+          },
+          "Date": {
+            "type": "string",
+            "example": "2026-09-11"
+          },
+          "Passage": {
+            "type": "string",
+            "example": "Efesus 3:14-21"
+          },
+          "Intro": {
+            "type": "string",
+            "nullable": true,
+            "example": "Doa Paulus untuk jemaat di Efesus."
+          },
+          "Content": {
+            "type": "string",
+            "example": "Kasih Kristus melampaui segala pengetahuan manusia..."
+          },
+          "Source": {
+            "type": "string",
+            "example": "Santapan Harian"
+          }
+        }
+      },
+      "SongListItem": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "example": "Kidung Jemaat"
+          },
+          "id": {
+            "type": "string",
+            "example": "1"
+          },
+          "title": {
+            "type": "string",
+            "example": "Hai Kristen, Nyanyilah"
+          }
+        }
+      },
+      "SongLyricElement": {
+        "type": "object",
+        "properties": {
+          "element": {
+            "type": "string",
+            "example": "Bait 1"
+          },
+          "content": {
+            "type": "string",
+            "example": "Hai Kristen, nyanyilah, Haleluya! Amin!\nRajamu pujilah, Haleluya! Amin!"
+          }
+        }
+      },
+      "SongDetailResponse": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "example": "Kidung Jemaat"
+          },
+          "id": {
+            "type": "string",
+            "example": "1"
+          },
+          "title": {
+            "type": "string",
+            "example": "Hai Kristen, Nyanyilah"
+          },
+          "lyrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SongLyricElement"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Internal Server Error"
+          }
+        }
+      }
+    }
+  }
+}
