@@ -64,12 +64,29 @@ Queries Google Play Store for the live app version and official release notes (`
   }
   ```
 
-### 2. Bible Reader
+### 2. Bible & Version Catalog
 
 ```http
-GET /bible/read/:book/:chapter
-GET /bible/read/:book/:chapterAndVerse
+# List all 110+ Bible versions & languages (with optional category & search filter)
+GET /bible/versions
+GET /bible/versions?category=indonesia
+GET /bible/versions?search=kjv
+
+# Get Bible version metadata, testaments coverage, book catalog & copyright
+GET /bible/version/:version
+GET /bible/version/tb
+GET /bible/version/ayt
+GET /bible/version/kjv
+
+# Chapter & verse count metadata
+GET /bible/find/:book
+
+# Read Bible passage / verses (defaults to TB)
+GET /bible/read/:book/:chapter/:version?
+GET /bible/read/:book/:chapterAndVerse/:version?
 ```
+
+- **Edge CDN Caching:** Static metadata cached for 24h on browser, 1 year on Edge CDN (`public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800`).
 
 ### 3. Daily Reflections
 
@@ -142,8 +159,8 @@ Contributions are what make the open source community such an amazing place to l
 - [x] App version detection & dynamic What's New from Google Play (`/app/version`)
 - [x] 15-minute Edge CDN caching for version checks
 - [x] Add Swagger API documentation (`/docs`)
-- [ ] Get All Bible Version / Language List
-- [ ] Get All Bible Version / Language Detail
+- [x] Get All Bible Version / Language List (`/bible/versions`)
+- [x] Get All Bible Version / Language Detail (`/bible/version/:version`)
 
 <!-- SOURCE -->
 

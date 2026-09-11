@@ -113,6 +113,128 @@
         }
       }
     },
+    "/bible/versions": {
+      "get": {
+        "tags": [
+          "Bible"
+        ],
+        "summary": "Get all Bible versions and languages catalog",
+        "description": "Retrieves the complete catalog of 110+ available Bible versions across Indonesian, ethnic/tribal languages (Bahasa Suku), English, Hebrew, Greek, and Interlinear editions. Supports optional filtering by category and search keyword. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Filter by language or category name (e.g. indonesia, suku, inggris, yunani, ibrani)",
+            "schema": {
+              "type": "string",
+              "example": "indonesia"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Filter by version code or name (e.g. tb, kjv, ayt, bsd)",
+            "schema": {
+              "type": "string",
+              "example": "tb"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bible versions catalog retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibleVersionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid accesskey header"
+          },
+          "500": {
+            "description": "Failed to fetch bible versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bible/version/{version}": {
+      "get": {
+        "tags": [
+          "Bible"
+        ],
+        "summary": "Get Bible version details, books catalog, and copyright",
+        "description": "Retrieves comprehensive metadata for a specific Bible version code (e.g. tb, ayt, bsd, kjv), including testament coverage (Old Testament/PL and New Testament/PB), total book count, canonical book list with abbreviations and full Indonesian names, and publisher copyright information. Requires accesskey header.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "description": "Bible version code identifier (e.g. tb, ayt, bsd, kjv, net)",
+            "schema": {
+              "type": "string",
+              "example": "tb"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bible version details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BibleVersionDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - missing or invalid accesskey header"
+          },
+          "404": {
+            "description": "Bible version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to fetch bible version details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/bible/find/{book}": {
       "get": {
         "tags": [
@@ -679,6 +801,127 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SongLyricElement"
+            }
+          }
+        }
+      },
+      "BibleVersionItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "tb"
+          },
+          "name": {
+            "type": "string",
+            "example": "Alkitab Terjemahan Baru (TB) - 1974"
+          },
+          "is_new_testament_only": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "BibleVersionCategory": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "example": "Bahasa Indonesia"
+          },
+          "total": {
+            "type": "integer",
+            "example": 28
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BibleVersionItem"
+            }
+          }
+        }
+      },
+      "BibleVersionsResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 112
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BibleVersionCategory"
+            }
+          }
+        }
+      },
+      "BibleBookCatalogItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "Kej"
+          },
+          "abbr": {
+            "type": "string",
+            "example": "Kej"
+          },
+          "name": {
+            "type": "string",
+            "example": "Kejadian"
+          },
+          "testament": {
+            "type": "string",
+            "nullable": true,
+            "example": "PL"
+          }
+        }
+      },
+      "BibleCopyright": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Alkitab Terjemahan Baru (TB) - 1974"
+          },
+          "description": {
+            "type": "string",
+            "example": "Teks Alkitab Terjemahan Baru Indonesia © LAI 1974..."
+          }
+        }
+      },
+      "BibleVersionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "tb"
+          },
+          "name": {
+            "type": "string",
+            "example": "Alkitab Terjemahan Baru (TB) - 1974"
+          },
+          "has_old_testament": {
+            "type": "boolean",
+            "example": true
+          },
+          "has_new_testament": {
+            "type": "boolean",
+            "example": true
+          },
+          "total_books": {
+            "type": "integer",
+            "example": 66
+          },
+          "copyright": {
+            "$ref": "#/components/schemas/BibleCopyright"
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BibleBookCatalogItem"
             }
           }
         }
