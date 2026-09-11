@@ -4,6 +4,8 @@ const router = express.Router();
 router.get('/version', async (req, res) => {
   try {
     const appId = req.query.appId || 'fulk.evilcorp.dailyreflection';
+    const lang = req.query.lang || 'id';
+    const country = req.query.country || (lang === 'en' ? 'us' : 'id');
     
     // 1. Fetch config from R2 for minVersionCode independently
     let minVersionCode = 0;
@@ -17,25 +19,37 @@ router.get('/version', async (req, res) => {
       console.error("Failed to fetch config from R2:", e);
     }
 
-    // 2. Try fetching latest Play Store version
+    // 2. Try fetching latest Play Store version and What's New
     let latestVersionName = "1.0.0";
     let url = `https://play.google.com/store/apps/details?id=${appId}`;
+    let recentChanges = null;
     try {
       const gplay = await import('google-play-scraper');
-      const app = await gplay.default.app({ appId });
+      const app = await gplay.default.app({ appId, lang, country });
       latestVersionName = app.version || latestVersionName;
       url = app.url || url;
+      if (app.recentChanges) {
+        recentChanges = app.recentChanges
+          .replace(/<br\s*[\/]?>/gi, '\n')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .trim();
+      }
     } catch (playError) {
       console.error("Error fetching from Play Store (could be rate limit):", playError);
       // We continue since we still have the minVersionCode
     }
     
-    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=7200");
+    // Cache for 15 minutes (900 seconds)
+    res.setHeader("Cache-Control", "public, max-age=900, s-maxage=900, stale-while-revalidate=1800");
     res.json({
       latestVersionName,
       url,
       forceUpdate: false,
-      minVersionCode
+      minVersionCode,
+      recentChanges
     });
   } catch (error) {
     console.error("Fatal error in app version route:", error);
