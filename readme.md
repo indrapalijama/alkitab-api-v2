@@ -27,7 +27,59 @@ Simple Alkitab API using expressJS, scrapped from mentioned source.
 ### Tech Stack
 
 - [Express JS](https://github.com/expressjs/express)
-- [CheerioJS](https://cheerio.js.org)
+- [CheerioJS](https://cheerio.js.org) - Web scraping HTML parser
+- [Google Play Scraper](https://github.com/facundoolano/google-play-scraper) - Live Play Store metadata & release notes
+- [Axios](https://axios-http.com) - HTTP client
+- [@aws-sdk/client-s3](https://github.com/aws/aws-sdk-js-v3) - Cloudflare R2 / S3 storage integration
+- [Vercel](https://vercel.com) - Serverless Edge CDN hosting
+
+---
+
+## API Endpoints
+
+### 1. App Version & Dynamic What's New
+
+```http
+GET /app/version?lang={id|en}&country={id|us}
+```
+
+Queries Google Play Store for the live app version and official release notes (`recentChanges`) matching the user's locale.
+
+- **Caching:** 15-Minute Vercel Edge CDN cache (`public, max-age=900, s-maxage=900, stale-while-revalidate=1800`).
+- **Response Format:**
+  ```json
+  {
+    "latestVersionName": "1.4.3",
+    "url": "https://play.google.com/store/apps/details?id=fulk.evilcorp.dailyreflection&hl=id&gl=id",
+    "forceUpdate": false,
+    "minVersionCode": 0,
+    "recentChanges": "- Pemulihan favorit dan sinkronisasi cloud lebih andal.\n- Tampilan \"Yang Baru\" dinamis serta deteksi update lebih cepat."
+  }
+  ```
+
+### 2. Bible Reader
+
+```http
+GET /bible/read/:book/:chapter
+GET /bible/read/:book/:chapterAndVerse
+```
+
+### 3. Daily Reflections
+
+```http
+GET /reflection/:source
+```
+Supported sources: `sh` (Santapan Harian), `rh` (Renungan Harian), `roc` (Renungan Oswald Chambers).
+
+### 4. Hymns (Kidung)
+
+```http
+GET /song/:source/list
+GET /song/detail/:source/:id
+```
+Supported hymn books: `KJ` (Kidung Jemaat), `PKJ` (Pelengkap Kidung Jemaat), `NKB` (Nyanyikanlah Kidung Baru).
+
+---
 
 <!-- GETTING STARTED -->
 
@@ -37,8 +89,7 @@ To get a local copy up and running follow these simple steps.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-
+- Node.js 22.x
 - npm
   ```sh
   npm install npm@latest -g
@@ -48,7 +99,7 @@ This is an example of how to list things you need to use the software and how to
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/indrapalijama/alkitab-api.git
+   git clone https://github.com/indrapalijama/alkitab-api-v2.git
    ```
 2. Install NPM packages
    ```sh
@@ -63,7 +114,7 @@ This is an example of how to list things you need to use the software and how to
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -75,15 +126,15 @@ Contributions are what make the open source community such an amazing place to b
 
 ## To-do List
 
-Improve API
-
 - [x] Get Chapter Info (Verses Count)
-- [x] Add API Docs (Swaggger)
 - [x] Add Daily Reflection (Renungan Harian / Santapan Harian)
 - [x] Add New Source for Daily Reflection (Renungan Oswald Chambers)
-- [x] Get List of All Book
+- [x] Get List of All Books
 - [x] Get Kidung Song List (KJ, PKJ, NKB)
 - [x] Get Song Detail (KJ, PKJ, NKB)
+- [x] App version detection & dynamic What's New from Google Play (`/app/version`)
+- [x] 15-minute Edge CDN caching for version checks
+- [ ] Add Swagger API documentation
 - [ ] Get All Bible Version / Language List
 - [ ] Get All Bible Version / Language Detail
 
