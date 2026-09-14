@@ -118,6 +118,19 @@ const read = async (req, res) => {
                 lastVerse = verse;
             }
 
+            if (content && version && version.toLowerCase() === 'kjv') {
+                content = content
+                    .replace(/\{[^}]*\}/g, "")
+                    .replace(/<[^>]+>/g, "")
+                    .replace(/\(\d+\)/g, "")
+                    .replace(/_([,.:;?!])/g, "$1")
+                    .replace(/_/g, "")
+                    .replace(/\[(.*?)\]/g, "$1")
+                    .replace(/\s+([,.:;?!])/g, "$1")
+                    .replace(/\s{2,}/g, " ")
+                    .trim();
+            }
+
             if (
                 data.attr("hidden") === "hidden" ||
                 data.hasClass("loading") ||
