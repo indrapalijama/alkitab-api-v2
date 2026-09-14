@@ -35,6 +35,9 @@ router.get('/version', async (req, res) => {
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&quot;/g, '"')
+          .replace(/&#39;|&apos;|&#x27;/gi, "'")
+          .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+          .replace(/&#x([0-9a-fA-F]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
           .trim();
       }
     } catch (playError) {
