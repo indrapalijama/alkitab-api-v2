@@ -11,7 +11,8 @@ router.get('/version', async (req, res) => {
     let minVersionCode = 0;
     try {
       const configRes = await fetch("https://pub-9e4f37fb34284aad81e4b9c7a8285ee9.r2.dev/config/app.json");
-      if (configRes.ok) {
+      const contentType = configRes.headers.get("content-type") || "";
+      if (configRes.ok && contentType.includes("application/json")) {
         const config = await configRes.json();
         minVersionCode = config.minVersionCode || 0;
       }
@@ -23,12 +24,16 @@ router.get('/version', async (req, res) => {
     let latestVersionName = "1.0.0";
     let url = `https://play.google.com/store/apps/details?id=${appId}`;
     let recentChanges = null;
+    let fetchSuccess = false;
     try {
       const gplay = await import('google-play-scraper');
       const app = await gplay.default.app({ appId, lang, country });
-      latestVersionName = app.version || latestVersionName;
-      url = app.url || url;
-      if (app.recentChanges) {
+      if (app && app.version) {
+        latestVersionName = app.version;
+        fetchSuccess = true;
+      }
+      url = app?.url || url;
+      if (app?.recentChanges) {
         recentChanges = app.recentChanges
           .replace(/<br\s*[\/]?>/gi, '\n')
           .replace(/&amp;/g, '&')
@@ -45,8 +50,13 @@ router.get('/version', async (req, res) => {
       // We continue since we still have the minVersionCode
     }
     
-    // Cache for 15 minutes (900 seconds)
-    res.setHeader("Cache-Control", "public, max-age=900, s-maxage=900, stale-while-revalidate=1800");
+    // Set cache: 5 minutes if successful, never cache failures/rate-limits
+    if (fetchSuccess && latestVersionName !== "1.0.0") {
+      res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300, stale-while-revalidate=600");
+    } else {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    }
+
     res.json({
       latestVersionName,
       url,
