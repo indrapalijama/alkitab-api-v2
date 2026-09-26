@@ -509,13 +509,14 @@
             "name": "source",
             "in": "path",
             "required": true,
-            "description": "Song book identifier (kj = Kidung Jemaat, pkj = Pelengkap Kidung Jemaat, nkb = Nyanyikanlah Kidung Baru)",
+            "description": "Song book identifier (kj = Kidung Jemaat, pkj = Pelengkap Kidung Jemaat, nkb = Nyanyikanlah Kidung Baru, gpm = Nyanyian GPM)",
             "schema": {
               "type": "string",
               "enum": [
                 "kj",
                 "pkj",
-                "nkb"
+                "nkb",
+                "gpm"
               ],
               "example": "kj"
             }
@@ -570,7 +571,8 @@
               "enum": [
                 "kj",
                 "pkj",
-                "nkb"
+                "nkb",
+                "gpm"
               ],
               "example": "kj"
             }

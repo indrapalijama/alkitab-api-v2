@@ -1,5 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const gpmData = require("../data/gpm.json");
 
 const isLink = (el) => {
     return "a" === el.name;
@@ -7,6 +8,13 @@ const isLink = (el) => {
 
 const getList = async (req, res) => {
     try {
+        const versionKey = req.params.source.toLowerCase();
+
+        if (versionKey === "gpm") {
+            res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800');
+            return res.status(200).json(gpmData.list);
+        }
+
         const songversion = {
             kj: {
                 url: "https://alkitab.mobi/kidung/kj",
@@ -22,7 +30,6 @@ const getList = async (req, res) => {
             },
         };
 
-        const versionKey = req.params.source.toLowerCase();
         const versionData = songversion[versionKey];
 
         if (!versionData) {
@@ -132,6 +139,15 @@ const linesAreVariantHeader = (b) => {
 const getSongData = async (req, res) => {
     const id = req.params.id;
     const versionKey = req.params.source.toLowerCase();
+
+    if (versionKey === "gpm") {
+        const song = gpmData.songs[id];
+        if (!song) {
+            return res.status(404).json({ error: "Song not found" });
+        }
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800');
+        return res.status(200).json(song);
+    }
 
     const songversion = {
         kj: ["Kidung Jemaat"],
