@@ -30,6 +30,13 @@ app.use("/reflection", isAuth, reflection);
 app.use("/song", isAuth, song);
 app.use("/app", appRoute); // Not auth required
 
-app.listen(process.env.PORT, "0.0.0.0", () => {
-  console.log(`cooking now @ http://localhost:${process.env.PORT}`);
-});
+if (process.env.NODE_ENV !== "test" && process.env.PORT) {
+  app.listen(process.env.PORT, "0.0.0.0", () => {
+    console.log(`cooking now @ http://localhost:${process.env.PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.config = {
+  maxDuration: 60,
+};
